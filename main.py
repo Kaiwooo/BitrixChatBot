@@ -35,22 +35,18 @@ async def install(request: Request):
 
 @app.post("/event")
 async def event_handler(request: Request):
-    data = await request.json()
-    logger.info(f"EVENT: {data}")
+    content_type = request.headers.get("content-type", "")
 
-    if data.get("event") == "ONIMBOTMESSAGEADD":
-        message_data = data.get("data", {})
-        message_text = message_data.get("MESSAGE")
-        dialog_id = message_data.get("DIALOG_ID")
+    if "application/json" in content_type:
+        data = await request.json()
+    else:
+        form = await request.form()
+        data = dict(form)
 
-        bx = BitrixApp(data)
+        import json
+        if "data" in data:
+            data["data"] = json.loads(data["data"])
 
-        await bx.call(
-            "imbot.message.add",
-            {
-                "DIALOG_ID": dialog_id,
-                "MESSAGE": message_text,
-            },
-        )
+    logger.info(f"EVENT DATA: {data}")
 
     return {"result": "ok"}
