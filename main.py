@@ -16,12 +16,8 @@ TOKENS = {}
 # ------------------------
 @app.post("/install")
 async def install(request: Request):
-    content_type = request.headers.get("content-type", "")
-    if "application/json" in content_type:
-        data = await request.json()
-    else:
-        form = await request.form()
-        data = dict(form)
+    form = await request.form()
+    data = dict(form)
 
     # Получаем auth и client_id/client_secret
     auth = {k.replace("auth[", "").replace("]", ""): v for k, v in data.items() if k.startswith("auth[")}
@@ -45,17 +41,20 @@ async def install(request: Request):
         expires_in=int(auth.get("expires_in", 3600))
     )
 
-    # Создаём клиент API
+    # Клиент REST API v3
     client = Client(bitrix_token, prefer_version=3)
 
-    # Регистрируем бота
-    result = await client.imbot.register(
-        TYPE="B",
-        CODE="echo_bot_python",
-        EVENT_MESSAGE_ADD=f"https://{domain}/event",
-        PROPERTIES={
-            "NAME": "Echo Bot",
-            "COLOR": "AQUA",
+    # Регистрируем бота через call()
+    result = await client.call(
+        "imbot.register",
+        {
+            "TYPE": "B",
+            "CODE": "echo_bot_python",
+            "EVENT_MESSAGE_ADD": f"https://{domain}/event",
+            "PROPERTIES": {
+                "NAME": "Echo Bot",
+                "COLOR": "AQUA",
+            },
         }
     )
     logger.info(f"BOT REGISTER RESULT: {result}")
@@ -107,9 +106,12 @@ async def event_handler(request: Request):
         message_text = msg_data.get("MESSAGE")
 
         if dialog_id and message_text:
-            response = await client.imbot.message.add(
-                DIALOG_ID=dialog_id,
-                MESSAGE=message_text
+            response = await client.call(
+                "imbot.message.add",
+                {
+                    "DIALOG_ID": dialog_id,
+                    "MESSAGE": message_text
+                }
             )
             logger.info(f"Echoed message to {dialog_id}: {message_text}, response: {response}")
 
