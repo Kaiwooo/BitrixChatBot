@@ -50,10 +50,7 @@ async def install(request: Request):
         "OPENLINE": "Y",
         "NAME": "MyPythonEchoBot",
         "PROPERTIES": {
-            "LAST_NAME": "BotLastName",
             "COLOR": "GREEN",
-            "EMAIL": "test@test.ru",
-            "PERSONAL_BIRTHDAY": "2016-03-11",
             "WORK_POSITION": "EchoBot for Open Line"
         }
     }, auth)
