@@ -8,7 +8,7 @@ from config import EVENT_WEBHOOK
 router = APIRouter()
 
 
-@router.post("/")
+@router.post("/install")
 async def install(request: Request):
     # Попытка получить JSON, fallback на form
     try:

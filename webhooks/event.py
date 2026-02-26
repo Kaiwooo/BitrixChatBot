@@ -5,7 +5,7 @@ from storage import load_config
 
 router = APIRouter()
 
-@router.post("/")
+@router.post("/event")
 async def event(request: Request):
     data = await request.json()
     event = data.get("event")
