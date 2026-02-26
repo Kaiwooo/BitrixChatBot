@@ -42,9 +42,12 @@ async def install(request: Request):
     bot_result = await call("imbot.register", {
         "CODE": "echobot",
         "TYPE": "O",
-        "EVENT_HANDLER": handler_url,
+
+        "EVENT_MESSAGE_ADD": handler_url,
+        "EVENT_WELCOME_MESSAGE": handler_url,
+        "EVENT_BOT_DELETE": handler_url,
+
         "OPENLINE": "Y",
-        "CLIENT_ID": "",
         "NAME": "MyPythonEchoBot",
         "PROPERTIES": {
             "LAST_NAME": "BotLastName",
