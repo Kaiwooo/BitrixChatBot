@@ -45,8 +45,8 @@ async def install(request: Request):
         "EVENT_HANDLER": handler_url,
         "OPENLINE": "Y",
         "CLIENT_ID": "",
+        "NAME": "MyPythonEchoBot",
         "PROPERTIES": {
-            "NAME": "MyPythonEchoBot",
             "LAST_NAME": "BotLastName",
             "COLOR": "GREEN",
             "EMAIL": "test@test.ru",
