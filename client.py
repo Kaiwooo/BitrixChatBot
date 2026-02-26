@@ -4,7 +4,7 @@ from storage import save_config, load_config
 from config import CLIENT_ID, CLIENT_SECRET, DEBUG
 
 async def call(method: str, params: dict, auth: dict):
-    url = f"{auth['client_endpoint']}/api/{method}"
+    url = f"{auth['client_endpoint']}{method}"
     params["auth"] = auth["access_token"]
 
     if DEBUG:
