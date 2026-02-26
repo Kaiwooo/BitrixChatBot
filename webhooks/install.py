@@ -46,8 +46,8 @@ async def install(request: Request):
         "OPENLINE": "Y",
         "CLIENT_ID": "",
         "PROPERTIES": {
-            "NAME": "My Python EchoBot",
-            "LAST_NAME": "",
+            "NAME": "MyPythonEchoBot",
+            "LAST_NAME": "BotLastName",
             "COLOR": "GREEN",
             "EMAIL": "test@test.ru",
             "PERSONAL_BIRTHDAY": "2016-03-11",
