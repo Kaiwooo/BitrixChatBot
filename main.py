@@ -9,12 +9,22 @@ app = FastAPI()
 
 @app.post("/install")
 async def install(request: Request):
-    data = await request.json()
+    content_type = request.headers.get("content-type", "")
+
+    if "application/json" in content_type:
+        data = await request.json()
+    else:
+        form = await request.form()
+        data = dict(form)
+
+        import json
+        if "auth" in data:
+            data["auth"] = json.loads(data["auth"])
+
     logger.info(f"INSTALL DATA: {data}")
 
     bx = BitrixApp(data)
 
-    # регистрируем бота
     result = await bx.call(
         "imbot.register",
         {
@@ -29,7 +39,6 @@ async def install(request: Request):
     )
 
     logger.info(f"BOT REGISTER RESULT: {result}")
-
     return {"result": "installed"}
 
 
