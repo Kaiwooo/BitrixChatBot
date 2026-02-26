@@ -45,6 +45,8 @@ async def install(request: Request):
         "EVENT_MESSAGE_ADD": handler_url,
         "EVENT_WELCOME_MESSAGE": handler_url,
         "EVENT_BOT_DELETE": handler_url,
+        "OPENLINE": "Y",
+        "CLIENT_ID": "",
         "PROPERTIES": {
             "NAME": f"My Python EchoBot {len(apps)+1}",
             "LAST_NAME": "",
