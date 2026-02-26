@@ -50,6 +50,7 @@ async def install(request: Request):
             "LAST_NAME": "",
             "COLOR": "GREEN",
             "EMAIL": "test@test.ru",
+            "PERSONAL_BIRTHDAY": "2016-03-11",
             "WORK_POSITION": "EchoBot for Open Line"
         }
     }, auth)

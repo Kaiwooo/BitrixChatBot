@@ -2,15 +2,40 @@
 import aiohttp
 from storage import save_config, load_config
 from config import CLIENT_ID, CLIENT_SECRET, DEBUG
+import logging
 
 async def call(method: str, params: dict, auth: dict):
     url = f"{auth['client_endpoint']}{method}"
     params["auth"] = auth["access_token"]
+
+    # 🔥 ЛОГИРУЕМ РЕАЛЬНЫЙ REST ЗАПРОС
+
+    payload = params.copy()
+    payload["auth"] = auth["access_token"]
+
+    logging.info("========== BITRIX REST REQUEST ==========")
+    logging.info(f"URL: {url}")
+    logging.info(f"METHOD: POST")
+    logging.info(f"PAYLOAD: {payload}")
+    logging.info("=========================================")
+
     if DEBUG:
         print("REST CALL:", url, params)
     async with aiohttp.ClientSession() as session:
         async with session.post(url, data=params) as resp:
             result = await resp.json()
+            status = resp.status
+            text = await resp.text()
+
+        # 🔥 ЛОГИРУЕМ ОТВЕТ
+    logging.info("========== BITRIX REST RESPONSE ==========")
+    logging.info(f"STATUS: {status}")
+    logging.info(f"BODY: {text}")
+    logging.info("==========================================")
+
+
+
+
     if "error" in result and result["error"] in ("expired_token", "invalid_token"):
         auth = await refresh_token(auth)
         if auth:
