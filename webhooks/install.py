@@ -1,30 +1,58 @@
-import logging
+# webhooks/install.py
 from fastapi import APIRouter, Request
-from storage import BITRIX_AUTH
-
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+from client import call
+from storage import load_config, save_config
+from config import EVENT_WEBHOOK
 
 router = APIRouter()
 
-@router.post("/install")
+@router.post("/")
 async def install(request: Request):
-    raw = await request.body()
-    logging.info(f"RAW INSTALL: {raw.decode(errors='ignore')}")
+    data = await request.json()
+    auth = data.get("auth")
+    lang = data.get("data", {}).get("LANGUAGE_ID", "en")
+    apps = load_config()
+    handler_url = EVENT_WEBHOOK
 
-    data = {}
-    try:
-        data = await request.json()
-    except:
-        form = await request.form()
-        data = dict(form)
+    # Register Bot
+    bot_result = await call("imbot.register", {
+        "CODE": "echobot",
+        "TYPE": "B",
+        "EVENT_MESSAGE_ADD": handler_url,
+        "EVENT_WELCOME_MESSAGE": handler_url,
+        "EVENT_BOT_DELETE": handler_url,
+        "OPENLINE": "Y",
+        "PROPERTIES": {
+            "NAME": f"EchoBot {len(apps)+1}",
+            "COLOR": "GREEN",
+            "EMAIL": "test@test.ru",
+            "WORK_POSITION": "My first echo bot"
+        }
+    }, auth)
+    bot_id = bot_result.get("result")
 
-    auth = {}
-    for k, v in data.items():
-        if k.startswith("auth[") and k.endswith("]"):
-            auth[k[5:-1]] = v
+    # Register Commands
+    commands = {}
+    for cmd, title in [("echo","Echo message"), ("echoList","List of colors"), ("help","Help message")]:
+        res = await call("imbot.command.register", {
+            "BOT_ID": bot_id,
+            "COMMAND": cmd,
+            "COMMON": "Y" if cmd=="echo" else "N",
+            "HIDDEN": "N",
+            "EXTRANET_SUPPORT": "N",
+            "LANG": [{"LANGUAGE_ID": lang, "TITLE": title, "PARAMS": ""}],
+            "EVENT_COMMAND_ADD": handler_url
+        }, auth)
+        commands[cmd] = res.get("result")
 
-    if auth:
-        BITRIX_AUTH["default"] = auth
-        logging.info("✅ OAuth сохранён")
+    # Bind OnAppUpdate
+    await call("event.bind", {"EVENT":"OnAppUpdate","HANDLER":handler_url}, auth)
 
-    return {"status": "ok"}
+    apps[auth["application_token"]] = {
+        "BOT_ID": bot_id,
+        "COMMANDS": commands,
+        "LANGUAGE_ID": lang,
+        "AUTH": auth
+    }
+    save_config(apps)
+    return {"status": "ok", "bot_id": bot_id, "commands": commands}
