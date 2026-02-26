@@ -9,7 +9,7 @@ async def call(method: str, params: dict, auth: dict):
 
     if DEBUG:
         print("REST CALL:", url, params)
-    async with aiohttp.ClientSession() as    session:
+    async with aiohttp.ClientSession() as session:
         async with session.post(url, data=params) as resp:
             result = await resp.json()
     if "error" in result and result["error"] in ("expired_token", "invalid_token"):
@@ -31,7 +31,7 @@ async def refresh_token(auth: dict):
     if DEBUG:
         print("REFRESH TOKEN:", url, params)
     async with aiohttp.ClientSession() as session:
-        async with session.post(url, data=params) as resp:
+        async with session.post(url, json=params) as resp:
             result = await resp.json()
     if "error" not in result:
         cfg = load_config()
