@@ -1,6 +1,6 @@
 import logging
 from fastapi import FastAPI, Request
-from b24pysdk import BitrixApp
+from b24pysdk import BitrixApp, BitrixTokenLocal, Client
 import json
 
 logging.basicConfig(level=logging.INFO)
@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# Словарь для хранения токенов (ключ — domain)
+# Словарь для хранения токенов по домену
 TOKENS = {}
 
 # ------------------------
@@ -16,7 +16,6 @@ TOKENS = {}
 # ------------------------
 @app.post("/install")
 async def install(request: Request):
-    # Обработка запроса
     content_type = request.headers.get("content-type", "")
     if "application/json" in content_type:
         data = await request.json()
@@ -24,7 +23,7 @@ async def install(request: Request):
         form = await request.form()
         data = dict(form)
 
-    # Парсим auth
+    # Получаем auth и client_id/client_secret
     auth = {k.replace("auth[", "").replace("]", ""): v for k, v in data.items() if k.startswith("auth[")}
 
     domain = auth.get("domain")
@@ -32,34 +31,35 @@ async def install(request: Request):
     logger.info(f"INSTALL DATA: {data}")
     logger.info(f"SAVED AUTH: {auth}")
 
-    # Создаём BitrixApp с обязательными client_id и client_secret
-    bx = BitrixApp(
+    # Создаём BitrixApp
+    bitrix_app = BitrixApp(
         client_id=auth.get("client_id"),
         client_secret=auth.get("client_secret")
     )
 
-    # Передаём access/refresh токены
-    bx.set_auth(
-        domain=auth.get("domain"),
-        access_token=auth.get("access_token"),
-        refresh_token=auth.get("refresh_token")
+    # Создаём локальный токен
+    bitrix_token = BitrixTokenLocal(
+        auth_token=auth.get("access_token"),
+        refresh_token=auth.get("refresh_token"),
+        bitrix_app=bitrix_app,
+        expires_in=int(auth.get("expires_in", 3600))
     )
+
+    # Создаём клиент API
+    client = Client(bitrix_token, prefer_version=3)
 
     # Регистрируем бота
-    result = await bx.call(
-        "imbot.register",
-        {
-            "TYPE": "B",
-            "CODE": "echo_bot_python",
-            "EVENT_MESSAGE_ADD": f"https://{domain}/event",
-            "PROPERTIES": {
-                "NAME": "Echo Bot",
-                "COLOR": "AQUA",
-            },
-        },
+    result = await client.imbot.register(
+        TYPE="B",
+        CODE="echo_bot_python",
+        EVENT_MESSAGE_ADD=f"https://{domain}/event",
+        PROPERTIES={
+            "NAME": "Echo Bot",
+            "COLOR": "AQUA",
+        }
     )
-
     logger.info(f"BOT REGISTER RESULT: {result}")
+
     return {"result": "installed"}
 
 
@@ -79,7 +79,7 @@ async def event_handler(request: Request):
 
     logger.info(f"EVENT DATA: {data}")
 
-    # Определяем domain
+    # Определяем домен
     domain = data.get("auth[domain]") or data.get("data", {}).get("DOMAIN")
     if not domain or domain not in TOKENS:
         logger.warning(f"No auth for domain: {domain}")
@@ -87,30 +87,30 @@ async def event_handler(request: Request):
 
     auth = TOKENS[domain]
 
-    # Создаём BitrixApp с auth
-    bx = BitrixApp()
-    bx.set_auth(
-        domain=auth.get("domain"),
-        access_token=auth.get("access_token"),
-        refresh_token=auth.get("refresh_token"),
+    # Создаём BitrixApp + Token + Client
+    bitrix_app = BitrixApp(
         client_id=auth.get("client_id"),
-        client_secret=auth.get("client_secret"),
+        client_secret=auth.get("client_secret")
     )
+    bitrix_token = BitrixTokenLocal(
+        auth_token=auth.get("access_token"),
+        refresh_token=auth.get("refresh_token"),
+        bitrix_app=bitrix_app,
+        expires_in=int(auth.get("expires_in", 3600))
+    )
+    client = Client(bitrix_token, prefer_version=3)
 
-    # Обработка входящего сообщения
+    # Эхо на входящее сообщение
     if data.get("event") == "ONIMBOTMESSAGEADD":
         msg_data = data.get("data", {})
         dialog_id = msg_data.get("DIALOG_ID")
         message_text = msg_data.get("MESSAGE")
 
         if dialog_id and message_text:
-            await bx.call(
-                "imbot.message.add",
-                {
-                    "DIALOG_ID": dialog_id,
-                    "MESSAGE": message_text
-                },
+            response = await client.imbot.message.add(
+                DIALOG_ID=dialog_id,
+                MESSAGE=message_text
             )
-            logger.info(f"Echoed message to {dialog_id}: {message_text}")
+            logger.info(f"Echoed message to {dialog_id}: {message_text}, response: {response}")
 
     return {"result": "ok"}
