@@ -17,13 +17,14 @@ async def install(request: Request):
     # Register Bot
     bot_result = await call("imbot.register", {
         "CODE": "echobot",
-        "TYPE": "B",
+        "TYPE": "O",
         "EVENT_MESSAGE_ADD": handler_url,
         "EVENT_WELCOME_MESSAGE": handler_url,
         "EVENT_BOT_DELETE": handler_url,
         "OPENLINE": "Y",
+        'CLIENT_ID': '',
         "PROPERTIES": {
-            "NAME": f"EchoBot {len(apps)+1}",
+            "NAME": f"My Python Chatbot EchoBot {len(apps)+1}",
             "COLOR": "GREEN",
             "EMAIL": "test@test.ru",
             "WORK_POSITION": "My first echo bot"
