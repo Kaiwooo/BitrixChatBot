@@ -45,17 +45,14 @@ async def install(request: Request):
     client = Client(bitrix_token, prefer_version=3)
 
     # Регистрируем бота через call()
-    result = await client.call(
-        "imbot.register",
-        {
-            "TYPE": "B",
-            "CODE": "echo_bot_python",
-            "EVENT_MESSAGE_ADD": f"https://{domain}/event",
-            "PROPERTIES": {
-                "NAME": "Echo Bot",
-                "COLOR": "AQUA",
-            },
-        }
+    result = await client.imbot.register(
+        TYPE="B",
+        CODE="echo_bot_python",
+        EVENT_MESSAGE_ADD=f"https://{domain}/event",
+        PROPERTIES={
+            "NAME": "Echo Bot python",
+            "COLOR": "AQUA",
+        },
     )
     logger.info(f"BOT REGISTER RESULT: {result}")
 
@@ -106,12 +103,9 @@ async def event_handler(request: Request):
         message_text = msg_data.get("MESSAGE")
 
         if dialog_id and message_text:
-            response = await client.call(
-                "imbot.message.add",
-                {
-                    "DIALOG_ID": dialog_id,
-                    "MESSAGE": message_text
-                }
+            response = await client.imbot.message.add(
+                DIALOG_ID=dialog_id,
+                MESSAGE=message_text
             )
             logger.info(f"Echoed message to {dialog_id}: {message_text}, response: {response}")
 
