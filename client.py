@@ -1,5 +1,7 @@
 # client.py
 import aiohttp
+from aiohttp import payload_type
+
 from storage import save_config, load_config
 from config import CLIENT_ID, CLIENT_SECRET, DEBUG
 
@@ -31,7 +33,7 @@ async def refresh_token(auth: dict):
     if DEBUG:
         print("REFRESH TOKEN:", url, params)
     async with aiohttp.ClientSession() as session:
-        async with session.post(url, data=params) as resp:
+        async with session.post(url, json=params) as resp:
             result = await resp.json()
     if "error" not in result:
         cfg = load_config()
