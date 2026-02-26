@@ -47,7 +47,7 @@ async def install(request: Request):
         "EVENT_BOT_DELETE": handler_url,
         "OPENLINE": "Y",
         "PROPERTIES": {
-            "NAME": f"My Python EchoBot {len(apps)+1}",
+            "NAME": "My Python EchoBot",
             "COLOR": "GREEN",
             "EMAIL": "test@test.ru",
             "WORK_POSITION": "EchoBot for Open Line"
