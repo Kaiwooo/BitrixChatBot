@@ -4,3 +4,4 @@ b24pysdk==0.4.0
 python-dotenv
 python-multipart
 httpx
+aiohttp
