@@ -16,7 +16,7 @@ TOKENS = {}
 # ------------------------
 @app.post("/install")
 async def install(request: Request):
-    # Универсальная обработка тела запроса
+    # Обработка запроса
     content_type = request.headers.get("content-type", "")
     if "application/json" in content_type:
         data = await request.json()
@@ -24,24 +24,25 @@ async def install(request: Request):
         form = await request.form()
         data = dict(form)
 
-    # Парсим auth из form-data
+    # Парсим auth
     auth = {k.replace("auth[", "").replace("]", ""): v for k, v in data.items() if k.startswith("auth[")}
 
-    # Сохраняем токен в памяти
     domain = auth.get("domain")
     TOKENS[domain] = auth
-
     logger.info(f"INSTALL DATA: {data}")
     logger.info(f"SAVED AUTH: {auth}")
 
-    # Создаём BitrixApp и передаём auth
-    bx = BitrixApp()
+    # Создаём BitrixApp с обязательными client_id и client_secret
+    bx = BitrixApp(
+        client_id=auth.get("client_id"),
+        client_secret=auth.get("client_secret")
+    )
+
+    # Передаём access/refresh токены
     bx.set_auth(
         domain=auth.get("domain"),
         access_token=auth.get("access_token"),
-        refresh_token=auth.get("refresh_token"),
-        client_id=auth.get("client_id"),
-        client_secret=auth.get("client_secret"),
+        refresh_token=auth.get("refresh_token")
     )
 
     # Регистрируем бота
