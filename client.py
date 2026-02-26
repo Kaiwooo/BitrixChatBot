@@ -1,5 +1,5 @@
 # client.py
-import aiohttp, json
+import aiohttp
 from storage import save_config, load_config
 from config import CLIENT_ID, CLIENT_SECRET, DEBUG
 

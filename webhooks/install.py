@@ -1,51 +1,44 @@
 # webhooks/install.py
-import json
+import logging
 from fastapi import APIRouter, Request
 from client import call
 from storage import load_config, save_config
 from config import EVENT_WEBHOOK
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
 router = APIRouter()
 
-
-@router.post("/install")
+@router.post("/")
 async def install(request: Request):
-    # Попытка получить JSON, fallback на form
+    raw = await request.body()
+    logging.info(f"RAW INSTALL BODY: {raw.decode(errors='ignore')}")
+
+    # Попробуем распарсить JSON, иначе form-data
+    data = {}
     try:
         data = await request.json()
-    except json.JSONDecodeError:
+    except Exception:
         form = await request.form()
         data = dict(form)
 
-    # auth может быть JSON-строкой
-    auth_raw = data.get("auth")
-    if isinstance(auth_raw, str):
-        try:
-            auth = json.loads(auth_raw)
-        except json.JSONDecodeError:
-            return {"status": "error", "message": "auth is invalid JSON"}
-    elif isinstance(auth_raw, dict):
-        auth = auth_raw
-    else:
-        return {"status": "error", "message": "auth missing or invalid"}
+    # Извлекаем auth
+    auth = {}
+    for k, v in data.items():
+        if k.startswith("auth[") and k.endswith("]"):
+            auth[k[5:-1]] = v
 
-    # язык
-    lang_raw = data.get("data")
-    if isinstance(lang_raw, str):
-        try:
-            lang_data = json.loads(lang_raw)
-        except json.JSONDecodeError:
-            lang_data = {}
-    elif isinstance(lang_raw, dict):
-        lang_data = lang_raw
-    else:
-        lang_data = {}
-    lang = lang_data.get("LANGUAGE_ID", "en")
+    if not auth:
+        logging.error("❌ Auth не найден")
+        return {"status": "error", "msg": "auth not found"}
+
+    logging.info(f"✅ OAuth получен: {auth}")
 
     apps = load_config()
-    handler_url = EVENT_WEBHOOK
+    lang = data.get("data", {}).get("LANGUAGE_ID", "en")
+    handler_url = EVENT_WEBHOOK  # <-- адрес для событий сообщений
 
-    # Регистрация бота
+    # Регистрируем бота
     bot_result = await call("imbot.register", {
         "CODE": "echobot",
         "TYPE": "O",
@@ -54,18 +47,21 @@ async def install(request: Request):
         "EVENT_BOT_DELETE": handler_url,
         "OPENLINE": "Y",
         "PROPERTIES": {
-            "NAME": f"My Python Chatbot EchoBot {len(apps)+1}",
+            "NAME": f"My Python EchoBot {len(apps)+1}",
             "COLOR": "GREEN",
             "EMAIL": "test@test.ru",
-            "WORK_POSITION": "My first echo bot"
+            "WORK_POSITION": "EchoBot for Open Line"
         }
     }, auth)
 
     bot_id = bot_result.get("result")
     if not bot_id:
-        return {"status": "error", "message": "failed to register bot", "details": bot_result}
+        logging.error(f"❌ Не удалось зарегистрировать бота: {bot_result}")
+        return {"status": "error", "msg": "bot registration failed"}
 
-    # Регистрация команд
+    logging.info(f"✅ Бот зарегистрирован, ID: {bot_id}")
+
+    # Регистрируем команды бота
     commands = {}
     for cmd, title in [("echo","Echo message"), ("echoList","List of colors"), ("help","Help message")]:
         res = await call("imbot.command.register", {
@@ -79,10 +75,12 @@ async def install(request: Request):
         }, auth)
         commands[cmd] = res.get("result")
 
-    # Подписка на событие OnAppUpdate
-    await call("event.bind", {"EVENT":"OnAppUpdate","HANDLER":handler_url}, auth)
+    logging.info(f"✅ Команды зарегистрированы: {commands}")
 
-    # Сохранение конфигурации
+    # Подписка на OnAppUpdate
+    bind_res = await call("event.bind", {"EVENT":"OnAppUpdate","HANDLER":handler_url}, auth)
+    logging.info(f"✅ Подписка на OnAppUpdate: {bind_res}")
+
     apps[auth["application_token"]] = {
         "BOT_ID": bot_id,
         "COMMANDS": commands,
@@ -90,5 +88,6 @@ async def install(request: Request):
         "AUTH": auth
     }
     save_config(apps)
+    logging.info("✅ Конфиг приложения сохранён")
 
     return {"status": "ok", "bot_id": bot_id, "commands": commands}

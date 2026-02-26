@@ -1,57 +1,62 @@
 # webhooks/event.py
+import logging
 from fastapi import APIRouter, Request
 from client import call
 from storage import load_config
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
 router = APIRouter()
 
-@router.post("/event")
+@router.post("/")
 async def event(request: Request):
-    data = await request.json()
-    event = data.get("event")
+    raw = await request.body()
+    logging.info(f"RAW EVENT BODY: {raw.decode(errors='ignore')}")
+
+    try:
+        data = await request.json()
+    except Exception:
+        logging.error("❌ Не удалось распарсить тело события как JSON")
+        return {"status": "error", "msg": "invalid json"}
+
+    event_type = data.get("event")
     params = data.get("data", {}).get("PARAMS", {})
-    auth = data.get("auth") or {}
+    auth = data.get("auth")
+    if not auth:
+        logging.error("❌ Auth не найден в событии")
+        return {"status": "error", "msg": "auth not found"}
 
     apps = load_config()
-    app_token = auth.get("application_token")
-    bot_auth = apps.get(app_token, {}).get("AUTH", auth)
+    app_entry = apps.get(auth.get("application_token"))
+    if not app_entry:
+        logging.warning("⚠️ Приложение не найдено в конфиге, добавим временно")
+        app_entry = {"AUTH": auth}
 
-    if event == "ONIMBOTMESSAGEADD":
-        chat_id = params.get("DIALOG_ID")
-        text = params.get("MESSAGE")
-        if chat_id and text:
-            await call("imbot.message.add", {
-                "DIALOG_ID": chat_id,
-                "MESSAGE": f"Echo: {text}"
-            }, bot_auth)
+    bot_id = app_entry.get("BOT_ID")
+    dialog_id = params.get("DIALOG_ID")
+    message_text = params.get("MESSAGE")
 
-    elif event == "ONIMCOMMANDADD":
-        for command in data["data"].get("COMMAND", []):
-            cmd = command.get("COMMAND")
-            if cmd == "echo":
-                await call("imbot.command.answer", {
-                    "COMMAND_ID": command["COMMAND_ID"],
-                    "MESSAGE_ID": command["MESSAGE_ID"],
-                    "MESSAGE": f"Echo command received: {command.get('COMMAND_PARAMS')}"
-                }, bot_auth)
-            elif cmd == "help":
-                await call("imbot.command.answer", {
-                    "COMMAND_ID": command["COMMAND_ID"],
-                    "MESSAGE_ID": command["MESSAGE_ID"],
-                    "MESSAGE": "Hello! I am EchoBot for Open Lines."
-                }, bot_auth)
+    # Обрабатываем событие нового сообщения для бота
+    if event_type == "ONIMBOTMESSAGEADD" and bot_id and dialog_id and message_text:
+        # Простое эхо
+        reply_text = f"Echo: {message_text}"
+        logging.info(f"✅ Отправляем сообщение: {reply_text}")
+        await call("imbot.message.add", {
+            "DIALOG_ID": dialog_id,
+            "MESSAGE": reply_text
+        }, auth)
 
-    elif event == "ONIMBOTJOINCHAT":
-        chat_id = params.get("DIALOG_ID")
-        if chat_id:
-            await call("imbot.message.add", {
-                "DIALOG_ID": chat_id,
-                "MESSAGE": "Welcome to EchoBot for Open Lines! Type 'help' for commands."
-            }, bot_auth)
+    # Обработка присоединения бота к чату / Open Line
+    elif event_type == "ONIMBOTJOINCHAT" and bot_id and dialog_id:
+        welcome = "Привет! Я EchoBot. Напишите что-нибудь, и я повторю это."
+        logging.info(f"✅ Отправляем приветственное сообщение в чат {dialog_id}")
+        await call("imbot.message.add", {
+            "DIALOG_ID": dialog_id,
+            "MESSAGE": welcome
+        }, auth)
 
-    elif event == "ONIMBOTDELETE":
-        if app_token in apps:
-            del apps[app_token]
-            save_config(apps)
+    # Другие события можно логировать
+    else:
+        logging.info(f"ℹ️ Получено событие: {event_type}")
 
     return {"status": "ok"}
