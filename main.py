@@ -1,6 +1,6 @@
 import logging
 from fastapi import FastAPI
-from webhooks import install, event
+from webhooks import install, event, unregister
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
