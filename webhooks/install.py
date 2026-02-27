@@ -11,7 +11,6 @@ async def install(request: Request):
     raw = await request.body()
     logging.info(f"RAW INSTALL BODY: {raw.decode(errors='ignore')}")
 
-    data = {}
     try:
         data = await request.json()
     except Exception:

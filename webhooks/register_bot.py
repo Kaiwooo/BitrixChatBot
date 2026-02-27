@@ -1,7 +1,7 @@
 import logging
 from fastapi import APIRouter, Request
 from client import call
-from storage import load_config, save_config
+from storage import load_config
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
@@ -30,13 +30,10 @@ async def register_bot(request: Request):
     if not bot_id:
         return {"status": "Error", "Bitrix response": result}
 
-    cfg["BOT_ID"] = bot_id
-    save_config(apps)
-
     logging.info(f"Bot ID: {bot_id}, Bitrix response: {result}")
 
     return {
-        "status": "success",
-        "bot_id": bot_id,
-        "bitrix_response": result
+        "Status": "Success",
+        "Bot_ID": bot_id,
+        "Bitrix_Response": result
     }

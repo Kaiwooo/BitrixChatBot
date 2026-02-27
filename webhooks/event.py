@@ -2,7 +2,6 @@
 import logging
 from fastapi import APIRouter, Request
 from client import call
-from storage import load_config
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
@@ -10,58 +9,58 @@ router = APIRouter()
 
 @router.post("")
 async def event(request: Request):
+    # Получаем сырой body для логов
     raw = await request.body()
     logging.info(f"RAW EVENT BODY: {raw.decode(errors='ignore')}")
 
+    # Пробуем распарсить JSON, иначе form-data
     try:
         data = await request.json()
     except Exception:
         form = await request.form()
         data = dict(form)
 
-    event_type = data.get("event")
+    logging.info(f"Parsed DATA: {data}")
 
-    params = data.get("data", {}).get("PARAMS", {})
+    # Извлекаем auth
     auth = data.get("auth")
-    if not auth:
-        logging.error("❌ Auth не найден в событии")
+    if not isinstance(auth, dict):
+        logging.error("❌ Auth не найден или некорректен")
         return {"status": "error", "msg": "auth not found"}
 
-    if event == "ONIMBOTDELETE":
-        bot_id = data.get("data[BOT_ID]") or data.get("BOT_ID")
+    # Тип события
+    event_type = data.get("event")
+    data_section = data.get("data") or {}
+
+    # Получаем id бота и данные сообщения
+    bot_id = data_section.get("BOT_ID") or data.get("data[BOT_ID]")
+    dialog_id = data_section.get("DIALOG_ID")
+    message_text = data_section.get("MESSAGE")
+
+    # Обрабатываем событие удаления бота
+    if event_type == "ONIMBOTDELETE":
         logging.info(f"🤖 Bot deleted from portal: {bot_id}")
         return {"status": "ok"}
 
-    apps = load_config()
-    app_entry = apps.get(auth.get("application_token"))
-    if not app_entry:
-        logging.warning("⚠️ Приложение не найдено в конфиге, добавим временно")
-        app_entry = {"AUTH": auth}
-
-    bot_id = app_entry.get("BOT_ID")
-    dialog_id = params.get("DIALOG_ID")
-    message_text = params.get("MESSAGE")
-
-    # Обрабатываем событие нового сообщения для бота
-    if event_type == "ONIMBOTMESSAGEADD" and bot_id and dialog_id and message_text:
-        # Простое эхо
+    # Эхо-сообщение при добавлении сообщения боту
+    if event_type == "ONIMBOTMESSAGEADD" and dialog_id and message_text:
         reply_text = f"Echo: {message_text}"
         logging.info(f"✅ Отправляем сообщение: {reply_text}")
-        await call("imbot.message.add", {
-            "DIALOG_ID": dialog_id,
-            "MESSAGE": reply_text
-        }, auth)
+        try:
+            await call("imbot.message.add", {"DIALOG_ID": dialog_id, "MESSAGE": reply_text}, auth)
+        except Exception as e:
+            logging.error(f"❌ Ошибка отправки сообщения: {e}")
 
-    # Обработка присоединения бота к чату / Open Line
-    elif event_type == "ONIMBOTJOINCHAT" and bot_id and dialog_id:
+    # Приветственное сообщение при присоединении к чату / Open Line
+    elif event_type == "ONIMBOTJOINCHAT" and dialog_id:
         welcome = "Привет! Я EchoBot. Напишите что-нибудь, и я повторю это."
-        logging.info(f"✅ Отправляем приветственное сообщение в чат {dialog_id}")
-        await call("imbot.message.add", {
-            "DIALOG_ID": dialog_id,
-            "MESSAGE": welcome
-        }, auth)
+        logging.info(f"✅ Отправляем приветствие в чат {dialog_id}")
+        try:
+            await call("imbot.message.add", {"DIALOG_ID": dialog_id, "MESSAGE": welcome}, auth)
+        except Exception as e:
+            logging.error(f"❌ Ошибка отправки приветствия: {e}")
 
-    # Другие события можно логировать
+    # Все остальные события логируем
     else:
         logging.info(f"ℹ️ Получено событие: {event_type}")
 
