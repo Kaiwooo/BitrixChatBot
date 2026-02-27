@@ -27,10 +27,7 @@ async def install(request: Request):
         logging.error("❌ Auth не найден")
         return {"status": "error", "msg": "auth not found"}
 
-    apps = load_config()
-    apps[auth["application_token"]] = {
-        "AUTH": auth
-    }
+    apps[auth["application_token"]] = auth  # вместо {"AUTH": auth}
     save_config(apps)
 
     logging.info("✅ OAuth сохранён в конфиг")

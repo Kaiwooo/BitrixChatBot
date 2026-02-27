@@ -23,8 +23,7 @@ async def unregister_bot(request: Request):
         return {"status": "error", "message": "No OAuth config found"}
 
     app_token, cfg = next(iter(apps.items()))
-    auth = cfg.get("AUTH")
-
+    auth = cfg  # cfg уже хранит auth как словарь
     result = await call("imbot.unregister", bot_params, auth)
 
     logging.info(f"Bot ID: {bot_id}, Bitrix response: {result}")

@@ -1,66 +1,54 @@
 # webhooks/event.py
-import logging
-from fastapi import APIRouter, Request
 from client import call
-
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+from fastapi import APIRouter, Request
+import logging
 
 router = APIRouter()
 
 @router.post("")
 async def event(request: Request):
-    # Получаем сырой body для логов
     raw = await request.body()
     logging.info(f"RAW EVENT BODY: {raw.decode(errors='ignore')}")
 
-    # Пробуем распарсить JSON, иначе form-data
     try:
         data = await request.json()
     except Exception:
         form = await request.form()
         data = dict(form)
 
-    logging.info(f"Parsed DATA: {data}")
+    # SDK хочет auth в виде словаря
+    # Берём либо из data["auth"], либо из data["data[BOT][ID][AUTH]"]
+    auth_keys = [k for k in data.keys() if k.startswith("auth[")]
+    auth = {}
+    for k in auth_keys:
+        auth[k[5:-1]] = data[k]
 
-    # Извлекаем auth
-    auth = data.get("auth")
-    if not isinstance(auth, dict):
-        logging.error("❌ Auth не найден или некорректен")
+    if not auth:
+        logging.error("❌ Auth не найден")
         return {"status": "error", "msg": "auth not found"}
 
-    # Тип события
     event_type = data.get("event")
-    data_section = data.get("data") or {}
+    params = {}
+    # собираем params для сообщений
+    for k, v in data.items():
+        if k.startswith("data[PARAMS]"):
+            key = k[len("data[PARAMS]["):-1]
+            params[key] = v
 
-    # Получаем id бота и данные сообщения
-    bot_id = data_section.get("BOT_ID") or data.get("data[BOT_ID]")
-    dialog_id = data_section.get("DIALOG_ID")
-    message_text = data_section.get("MESSAGE")
+    dialog_id = params.get("DIALOG_ID")
+    message_text = params.get("MESSAGE")
 
-    # Обрабатываем событие удаления бота
-    if event_type == "ONIMBOTDELETE":
-        logging.info(f"🤖 Bot deleted from portal: {bot_id}")
-        return {"status": "ok"}
-
-    # Эхо-сообщение при добавлении сообщения боту
+    # Обработка события добавления сообщения
     if event_type == "ONIMBOTMESSAGEADD" and dialog_id and message_text:
         reply_text = f"Echo: {message_text}"
         logging.info(f"✅ Отправляем сообщение: {reply_text}")
-        try:
-            await call("imbot.message.add", {"DIALOG_ID": dialog_id, "MESSAGE": reply_text}, auth)
-        except Exception as e:
-            logging.error(f"❌ Ошибка отправки сообщения: {e}")
+        await call("imbot.message.add", {"DIALOG_ID": dialog_id, "MESSAGE": reply_text}, auth)
 
-    # Приветственное сообщение при присоединении к чату / Open Line
     elif event_type == "ONIMBOTJOINCHAT" and dialog_id:
         welcome = "Привет! Я EchoBot. Напишите что-нибудь, и я повторю это."
         logging.info(f"✅ Отправляем приветствие в чат {dialog_id}")
-        try:
-            await call("imbot.message.add", {"DIALOG_ID": dialog_id, "MESSAGE": welcome}, auth)
-        except Exception as e:
-            logging.error(f"❌ Ошибка отправки приветствия: {e}")
+        await call("imbot.message.add", {"DIALOG_ID": dialog_id, "MESSAGE": welcome}, auth)
 
-    # Все остальные события логируем
     else:
         logging.info(f"ℹ️ Получено событие: {event_type}")
 

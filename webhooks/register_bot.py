@@ -22,8 +22,7 @@ async def register_bot(request: Request):
         return {"Status": "Error", "Message": "No OAuth config found"}
 
     app_token, cfg = next(iter(apps.items()))
-    auth = cfg.get("AUTH")
-
+    auth = cfg  # cfg уже хранит auth как словарь
     result = await call("imbot.register", bot_params, auth)
 
     bot_id = result.get("result")
