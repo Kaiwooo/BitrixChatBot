@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 router = APIRouter()
 
 @router.post("/")
-async def register(request: Request):
+async def register_bot(request: Request):
 
     body = await request.json()
     bot_params = body.get("bot_result")

@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 router = APIRouter()
 
 @router.post("/")
-async def unregister(request: Request):
+async def unregister_bot(request: Request):
     body = await request.json()
     bot_id = body.get("bot_id")
 
