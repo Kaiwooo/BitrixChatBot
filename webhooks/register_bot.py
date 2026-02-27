@@ -2,7 +2,6 @@ import logging
 from fastapi import APIRouter, Request
 from client import call
 from storage import load_config, save_config
-from config import EVENT_WEBHOOK
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
@@ -11,11 +10,13 @@ router = APIRouter()
 @router.post("")
 async def register_bot(request: Request):
 
-    body = await request.json()
-    bot_params = body.get("bot_params")
+    try:
+        bot_params = await request.json()
+    except Exception:
+        return {"status": "error", "message": "Invalid JSON"}
 
     if not bot_params:
-        return {"status": "error", "message": "bot_data is required"}
+        return {"status": "error", "message": "Empty body"}
 
     apps = load_config()
     if not apps:
@@ -24,6 +25,7 @@ async def register_bot(request: Request):
     app_token, cfg = next(iter(apps.items()))
     auth = cfg.get("AUTH")
 
+    # Отправляем в Bitrix ровно то, что пришло
     result = await call("imbot.register", bot_params, auth)
 
     bot_id = result.get("result")
