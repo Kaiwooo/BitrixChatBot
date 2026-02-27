@@ -1,6 +1,7 @@
 # webhooks/event.py
 from client import call
 from fastapi import APIRouter, Request
+from client import get_b24
 import logging
 
 router = APIRouter()
@@ -42,12 +43,20 @@ async def event(request: Request):
     if event_type == "ONIMBOTMESSAGEADD" and dialog_id and message_text:
         reply_text = f"Echo: {message_text}"
         logging.info(f"✅ Отправляем сообщение: {reply_text}")
-        await call("imbot.message.add", {"DIALOG_ID": dialog_id, "MESSAGE": reply_text}, auth)
+
+        # <-- Вставляем здесь SDK вызов
+        auth = {k[5:-1]: v for k, v in data.items() if k.startswith("auth[") and k.endswith("]")}
+        client = get_b24(auth)
+        await client.call("imbot.message.add", {"DIALOG_ID": dialog_id, "MESSAGE": reply_text})
 
     elif event_type == "ONIMBOTJOINCHAT" and dialog_id:
         welcome = "Привет! Я EchoBot. Напишите что-нибудь, и я повторю это."
         logging.info(f"✅ Отправляем приветствие в чат {dialog_id}")
         await call("imbot.message.add", {"DIALOG_ID": dialog_id, "MESSAGE": welcome}, auth)
+
+        auth = {k[5:-1]: v for k, v in data.items() if k.startswith("auth[") and k.endswith("]")}
+        client = get_b24(auth)
+        await client.call("imbot.message.add", {"DIALOG_ID": dialog_id, "MESSAGE": welcome})
 
     else:
         logging.info(f"ℹ️ Получено событие: {event_type}")

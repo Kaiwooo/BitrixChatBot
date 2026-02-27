@@ -15,7 +15,7 @@ async def unregister_bot(request: Request):
         return {"status": "error", "message": "Invalid JSON"}
 
     bot_id = bot_params.get("bot_id")
-    if not bot_params:
+    if not bot_id:
         return {"status": "error", "message": "bot_id is required"}
 
     apps = load_config()
