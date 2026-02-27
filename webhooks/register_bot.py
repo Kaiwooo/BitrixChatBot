@@ -8,14 +8,14 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 
 router = APIRouter()
 
-@router.post("/")
+@router.post("")
 async def register_bot(request: Request):
 
     body = await request.json()
-    bot_params = body.get("bot_result")
+    bot_params = body.get("bot_params")
 
     if not bot_params:
-        return {"status": "error", "message": "bot_result is required"}
+        return {"status": "error", "message": "bot_data is required"}
 
     apps = load_config()
     if not apps:
@@ -23,10 +23,6 @@ async def register_bot(request: Request):
 
     app_token, cfg = next(iter(apps.items()))
     auth = cfg.get("AUTH")
-
-    # ОБЯЗАТЕЛЬНО
-    bot_params["CLIENT_ID"] = ""
-    bot_params["EVENT_HANDLER"] = EVENT_WEBHOOK
 
     result = await call("imbot.register", bot_params, auth)
 

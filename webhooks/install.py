@@ -6,7 +6,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 
 router = APIRouter()
 
-@router.post("/")
+@router.post("")
 async def install(request: Request):
     raw = await request.body()
     logging.info(f"RAW INSTALL BODY: {raw.decode(errors='ignore')}")

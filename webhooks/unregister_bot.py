@@ -7,7 +7,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 
 router = APIRouter()
 
-@router.post("/")
+@router.post("")
 async def unregister_bot(request: Request):
     try:
         body = await request.json()
@@ -29,7 +29,7 @@ async def unregister_bot(request: Request):
 
     payload = {
         "BOT_ID": bot_id,
-        "CLIENT_ID": ""
+        #"CLIENT_ID": ""
     }
 
     result = await call("imbot.unregister", payload, auth)

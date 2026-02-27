@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 
 router = APIRouter()
 
-@router.post("/")
+@router.post("")
 async def event(request: Request):
     raw = await request.body()
     logging.info(f"RAW EVENT BODY: {raw.decode(errors='ignore')}")
@@ -16,15 +16,21 @@ async def event(request: Request):
     try:
         data = await request.json()
     except Exception:
-        logging.error("❌ Не удалось распарсить тело события как JSON")
-        return {"status": "error", "msg": "invalid json"}
+        form = await request.form()
+        data = dict(form)
 
     event_type = data.get("event")
+
     params = data.get("data", {}).get("PARAMS", {})
     auth = data.get("auth")
     if not auth:
         logging.error("❌ Auth не найден в событии")
         return {"status": "error", "msg": "auth not found"}
+
+    if event == "ONIMBOTDELETE":
+        bot_id = data.get("data[BOT_ID]") or data.get("BOT_ID")
+        logging.info(f"🤖 Bot deleted from portal: {bot_id}")
+        return {"status": "ok"}
 
     apps = load_config()
     app_entry = apps.get(auth.get("application_token"))
