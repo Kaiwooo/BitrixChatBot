@@ -1,6 +1,6 @@
 import logging
 from fastapi import APIRouter, Request
-from client.client import call
+from client.call import call
 from storage import load_config
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
