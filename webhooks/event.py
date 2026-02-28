@@ -1,63 +1,66 @@
 # webhooks/event.py
-from client import call
-from fastapi import APIRouter, Request
-from client import get_b24
 import logging
+from fastapi import APIRouter, Request
+from client.client import call
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 router = APIRouter()
 
 @router.post("")
 async def event(request: Request):
+    # Получаем сырой body для логов
     raw = await request.body()
     logging.info(f"RAW EVENT BODY: {raw.decode(errors='ignore')}")
 
+    # Пробуем распарсить JSON, иначе form-data
     try:
         data = await request.json()
     except Exception:
         form = await request.form()
         data = dict(form)
 
-    # SDK хочет auth в виде словаря
-    # Берём либо из data["auth"], либо из data["data[BOT][ID][AUTH]"]
-    auth_keys = [k for k in data.keys() if k.startswith("auth[")]
-    auth = {}
-    for k in auth_keys:
-        auth[k[5:-1]] = data[k]
+    logging.info(f"Parsed DATA: {data}")
 
-    if not auth:
-        logging.error("❌ Auth не найден")
+    # Извлекаем auth
+    auth = data.get("auth")
+    if not isinstance(auth, dict):
+        logging.error("❌ Auth не найден или некорректен")
         return {"status": "error", "msg": "auth not found"}
 
+    # Тип события
     event_type = data.get("event")
-    params = {}
-    # собираем params для сообщений
-    for k, v in data.items():
-        if k.startswith("data[PARAMS]"):
-            key = k[len("data[PARAMS]["):-1]
-            params[key] = v
+    data_section = data.get("data") or {}
 
-    dialog_id = params.get("DIALOG_ID")
-    message_text = params.get("MESSAGE")
+    # Получаем id бота и данные сообщения
+    bot_id = data_section.get("BOT_ID") or data.get("data[BOT_ID]")
+    dialog_id = data_section.get("DIALOG_ID")
+    message_text = data_section.get("MESSAGE")
 
-    # Обработка события добавления сообщения
+    # Обрабатываем событие удаления бота
+    if event_type == "ONIMBOTDELETE":
+        logging.info(f"🤖 Bot deleted from portal: {bot_id}")
+        return {"status": "ok"}
+
+    # Эхо-сообщение при добавлении сообщения боту
     if event_type == "ONIMBOTMESSAGEADD" and dialog_id and message_text:
         reply_text = f"Echo: {message_text}"
         logging.info(f"✅ Отправляем сообщение: {reply_text}")
+        try:
+            await call("imbot.message.add", {"DIALOG_ID": dialog_id, "MESSAGE": reply_text}, auth)
+        except Exception as e:
+            logging.error(f"❌ Ошибка отправки сообщения: {e}")
 
-        # <-- Вставляем здесь SDK вызов
-        auth = {k[5:-1]: v for k, v in data.items() if k.startswith("auth[") and k.endswith("]")}
-        client = get_b24(auth)
-        await client.call("imbot.message.add", {"DIALOG_ID": dialog_id, "MESSAGE": reply_text})
-
+    # Приветственное сообщение при присоединении к чату / Open Line
     elif event_type == "ONIMBOTJOINCHAT" and dialog_id:
         welcome = "Привет! Я EchoBot. Напишите что-нибудь, и я повторю это."
         logging.info(f"✅ Отправляем приветствие в чат {dialog_id}")
-        await call("imbot.message.add", {"DIALOG_ID": dialog_id, "MESSAGE": welcome}, auth)
+        try:
+            await call("imbot.message.add", {"DIALOG_ID": dialog_id, "MESSAGE": welcome}, auth)
+        except Exception as e:
+            logging.error(f"❌ Ошибка отправки приветствия: {e}")
 
-        auth = {k[5:-1]: v for k, v in data.items() if k.startswith("auth[") and k.endswith("]")}
-        client = get_b24(auth)
-        await client.call("imbot.message.add", {"DIALOG_ID": dialog_id, "MESSAGE": welcome})
-
+    # Все остальные события логируем
     else:
         logging.info(f"ℹ️ Получено событие: {event_type}")
 
