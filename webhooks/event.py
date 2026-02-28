@@ -1,7 +1,7 @@
 # webhooks/event.py
 import logging
 from fastapi import APIRouter, Request
-from client import call
+from client.client import call
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
