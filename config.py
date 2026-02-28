@@ -1,4 +1,3 @@
-# config.py
 CLIENT_ID = ""       # Для refresh_token, если нужно
 CLIENT_SECRET = ""   # Для refresh_token, если нужно
 DEBUG = True

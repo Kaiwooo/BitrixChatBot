@@ -1,4 +1,3 @@
-# webhooks/event.py
 from client.call import call
 from fastapi import APIRouter, Request
 import logging
