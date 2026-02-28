@@ -1,5 +1,5 @@
 import aiohttp
-from refresh_token import refresh_token
+from client.refresh_token import refresh_token
 from config import DEBUG
 
 async def call(method: str, params: dict, auth: dict):
