@@ -39,6 +39,11 @@ async def event(request: Request):
 
     # Обработка события добавления сообщения
     if event_type == "ONIMBOTMESSAGEADD" and dialog_id and message_text:
+        # Отвечаем только клиенту
+        is_connector = data.get("data[USER][IS_CONNECTOR]")
+        if is_connector != "Y":
+            return {"status": "ok"}
+
         reply_text = f"Echo: {message_text}"
         logging.info(f"✅ Отправляем сообщение: {reply_text}")
         await call("imbot.message.add", {"DIALOG_ID": dialog_id, "MESSAGE": reply_text}, auth)
