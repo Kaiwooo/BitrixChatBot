@@ -1,8 +1,9 @@
-import logging, json
+import logging
 from fastapi import APIRouter, Request
 from storage import load_config, save_config
+from utils.logging_helper import log_dict
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger("webhooks.install")
 
 router = APIRouter()
 
@@ -14,7 +15,7 @@ async def install(request: Request):
         form = await request.form()
         data = dict(form)
 
-    logging.info("INSTALL JSON:\n%s", json.dumps(data, indent=2, ensure_ascii=False))
+    log_dict(logger, data)
 
     # Извлекаем auth
     auth = {}
@@ -24,7 +25,7 @@ async def install(request: Request):
 
     if not auth:
         logging.error("❌ Auth не найден")
-        return {"status": "error", "msg": "auth not found"}
+        return
 
     apps = load_config()
     apps[auth["application_token"]] = auth  # вместо {"AUTH": auth}
@@ -32,4 +33,4 @@ async def install(request: Request):
 
     logging.info("✅ OAuth сохранён в конфиг")
 
-    return {"status": "ok"}
+    return
