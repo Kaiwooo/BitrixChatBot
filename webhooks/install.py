@@ -16,12 +16,10 @@ async def install(request: Request):
 
     log_dict(logger, data)
 
-    # Извлекаем auth
     auth = {}
     for k, v in data.items():
         if k.startswith("auth[") and k.endswith("]"):
             auth[k[5:-1]] = v
-
     if not auth:
         logging.error("❌ Auth не найден")
         return {"Status": "Error", "Response": "Auth not found"}

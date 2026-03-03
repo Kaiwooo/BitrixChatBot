@@ -32,12 +32,16 @@ async def event(request: Request):
     except Exception:
         form = await request.form()
         data = dict(form)
+
     log_dict(logger, {"Inbound Event": data})
+
     auth = extract_auth(data)
     if not auth:
         logger.error("❌ Auth not found")
         return
+
     event_type = data.get("event")
+
     logger.info(f"📌 Event type: {event_type}")
 
     handlers = {

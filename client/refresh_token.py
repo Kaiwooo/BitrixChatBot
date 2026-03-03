@@ -22,7 +22,7 @@ async def refresh_token(auth: dict):
         cfg = load_config()
         app_token = auth.get("application_token")
         if app_token:
-            cfg[app_token]["AUTH"] = result
+            cfg[app_token] = result
             save_config(cfg)
         return result
     return None
