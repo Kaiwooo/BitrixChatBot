@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 router = APIRouter()
 
 @router.post("")
-async def unregister_bot():
+async def bot_list():
     apps = load_config()
     if not apps:
         return {"status": "error", "message": "No OAuth config found"}
