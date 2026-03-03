@@ -1,4 +1,4 @@
-import logging
+import logging, json
 from fastapi import APIRouter, Request
 from storage import load_config, save_config
 
@@ -8,15 +8,13 @@ router = APIRouter()
 
 @router.post("")
 async def install(request: Request):
-    raw = await request.body()
-
     try:
         data = await request.json()
-        logging.info(f"RAW INSTALL JSON: {data}")
     except Exception:
         form = await request.form()
         data = dict(form)
-        logging.info(f"RAW INSTALL JSON: {data}")
+
+    logging.info("INSTALL JSON:\n%s", json.dumps(data, indent=2, ensure_ascii=False))
 
     # Извлекаем auth
     auth = {}
