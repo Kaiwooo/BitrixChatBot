@@ -3,7 +3,7 @@ from fastapi import APIRouter, Request
 from storage import load_config, save_config
 from utils.logging_helper import log_dict
 
-logger = logging.getLogger("webhooks.install")
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 

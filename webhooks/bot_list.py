@@ -2,8 +2,9 @@ import logging
 from fastapi import APIRouter
 from client.call import call
 from storage import load_config
+from utils.logging_helper import log_dict
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -17,9 +18,6 @@ async def bot_list():
     auth = cfg  # cfg уже хранит auth как словарь
     result = await call("imbot.bot.list", {}, auth)
 
-    logging.info(f"Bitrix response: {result}")
+    log_dict(logger, result)
 
-    return {
-        "Status": "Success",
-        "Bitrix_Result": result
-    }
+    return result
