@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from client.call import call
 from storage import load_config
 from utils.logging_helper import log_dict
+from utils.auth_helper import extract_auth
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
