@@ -4,7 +4,6 @@ from storage import load_config, save_config
 from utils.logging_helper import log_dict
 
 logger = logging.getLogger(__name__)
-
 router = APIRouter()
 
 @router.post("")
@@ -25,12 +24,11 @@ async def install(request: Request):
 
     if not auth:
         logging.error("❌ Auth не найден")
-        return
+        return {"Status": "Error", "Response": "Auth not found"}
 
     apps = load_config()
-    apps[auth["application_token"]] = auth  # вместо {"AUTH": auth}
+    apps[auth["application_token"]] = auth
     save_config(apps)
 
     logging.info("✅ OAuth сохранён в конфиг")
-
-    return
+    return {"Status": "OK"}

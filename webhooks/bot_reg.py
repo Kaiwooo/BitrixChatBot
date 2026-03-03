@@ -5,7 +5,6 @@ from storage import load_config
 from utils.logging_helper import log_dict
 
 logger = logging.getLogger(__name__)
-
 router = APIRouter()
 
 @router.post("")

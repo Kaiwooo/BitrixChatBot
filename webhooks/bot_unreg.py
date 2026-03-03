@@ -2,13 +2,17 @@ import logging
 from fastapi import APIRouter, Request
 from client.call import call
 from storage import load_config
+from utils.logging_helper import log_dict
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.post("")
 async def unregister_bot(request: Request):
+    apps = load_config()
+    if not apps:
+        return {"Status": "Error", "Message": "No OAuth config found"}
+
     try:
         bot_params = await request.json()
     except Exception:
@@ -18,18 +22,10 @@ async def unregister_bot(request: Request):
     if not bot_id:
         return {"status": "error", "message": "bot_id is required"}
 
-    apps = load_config()
-    if not apps:
-        return {"status": "error", "message": "No OAuth config found"}
-
     app_token, cfg = next(iter(apps.items()))
     auth = cfg  # cfg уже хранит auth как словарь
     result = await call("imbot.unregister", bot_params, auth)
 
-    logging.info(f"Bot ID: {bot_id}, Bitrix response: {result}")
+    log_dict(logger, result)
 
-    return {
-        "Status": "Success",
-        "Bot_ID": bot_id,
-        "Bitrix_Result": result
-    }
+    return result
