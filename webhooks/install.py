@@ -9,13 +9,14 @@ router = APIRouter()
 @router.post("")
 async def install(request: Request):
     raw = await request.body()
-    logging.info(f"RAW INSTALL BODY: {raw.decode(errors='ignore')}")
 
     try:
         data = await request.json()
+        logging.info(f"RAW INSTALL JSON: {data}")
     except Exception:
         form = await request.form()
         data = dict(form)
+        logging.info(f"RAW INSTALL JSON: {data}")
 
     # Извлекаем auth
     auth = {}
