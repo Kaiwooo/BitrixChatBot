@@ -1,4 +1,4 @@
-import aiohttp
+import httpx
 from storage import save_config, load_config
 from config import CLIENT_ID, CLIENT_SECRET, DEBUG
 
@@ -14,9 +14,10 @@ async def refresh_token(auth: dict):
     }
     if DEBUG:
         print("REFRESH TOKEN:", url, params)
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, json=params) as resp:
-            result = await resp.json()
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(url, json=params)
+        result = resp.json()
+
     if "error" not in result:
         cfg = load_config()
         app_token = auth.get("application_token")

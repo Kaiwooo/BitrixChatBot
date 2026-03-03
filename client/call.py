@@ -1,4 +1,4 @@
-import aiohttp
+import httpx
 from client.refresh_token import refresh_token
 from config import DEBUG
 
@@ -8,9 +8,9 @@ async def call(method: str, params: dict, auth: dict):
 
     if DEBUG:
         print("REST CALL:", url, params)
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, data=params) as resp:
-            result = await resp.json()
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(url, data=params)
+        result = resp.json()
     if "error" in result and result["error"] in ("expired_token", "invalid_token"):
         auth = await refresh_token(auth)
         if auth:
